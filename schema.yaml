@@ -1,0 +1,419 @@
+openapi: 3.0.3
+info:
+  title: Parcel Tracking Service API
+  version: 1.0.0
+  description: API documentation for parcel registration, tracking, and status updates.
+paths:
+  /api/auth/token/:
+    post:
+      operationId: auth_token_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthToken'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthToken'
+          description: ''
+  /api/offices/{id}/parcels/:
+    get:
+      operationId: offices_parcels_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - offices
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedParcelListList'
+          description: ''
+  /api/parcels/:
+    get:
+      operationId: parcels_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - parcels
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedParcelListList'
+          description: ''
+    post:
+      operationId: parcels_create
+      tags:
+      - parcels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParcelCreate'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParcelCreate'
+          description: ''
+  /api/parcels/{tracking_number}/:
+    get:
+      operationId: parcels_retrieve
+      parameters:
+      - in: path
+        name: tracking_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - parcels
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParcelDetail'
+          description: ''
+  /api/parcels/{tracking_number}/status/:
+    post:
+      operationId: parcels_status_create
+      description: Update parcel status and create a status history record.
+      parameters:
+      - in: path
+        name: tracking_number
+        schema:
+          type: string
+        required: true
+      tags:
+      - parcels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParcelStatusUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParcelStatusUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParcelStatusUpdate'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    AuthToken:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+        token:
+          type: string
+          readOnly: true
+      required:
+      - password
+      - token
+      - username
+    PaginatedParcelListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParcelList'
+    ParcelCreate:
+      type: object
+      properties:
+        tracking_number:
+          type: string
+          readOnly: true
+        sender_full_name:
+          type: string
+          maxLength: 255
+        sender_phone:
+          type: string
+          maxLength: 30
+        recipient_full_name:
+          type: string
+          maxLength: 255
+        recipient_phone:
+          type: string
+          maxLength: 30
+        weight_kg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        declared_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        origin_office:
+          type: integer
+        destination_office:
+          type: integer
+        current_status:
+          allOf:
+          - $ref: '#/components/schemas/ParcelStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - current_status
+      - declared_value
+      - destination_office
+      - origin_office
+      - recipient_full_name
+      - recipient_phone
+      - sender_full_name
+      - sender_phone
+      - tracking_number
+      - weight_kg
+    ParcelDetail:
+      type: object
+      properties:
+        tracking_number:
+          type: string
+          readOnly: true
+        sender_full_name:
+          type: string
+          maxLength: 255
+        sender_phone:
+          type: string
+          maxLength: 30
+        recipient_full_name:
+          type: string
+          maxLength: 255
+        recipient_phone:
+          type: string
+          maxLength: 30
+        weight_kg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        declared_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        origin_office:
+          allOf:
+          - $ref: '#/components/schemas/PostOffice'
+          readOnly: true
+        destination_office:
+          allOf:
+          - $ref: '#/components/schemas/PostOffice'
+          readOnly: true
+        current_status:
+          $ref: '#/components/schemas/ParcelStatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParcelStatusHistory'
+          readOnly: true
+      required:
+      - created_at
+      - declared_value
+      - destination_office
+      - origin_office
+      - recipient_full_name
+      - recipient_phone
+      - sender_full_name
+      - sender_phone
+      - status_history
+      - tracking_number
+      - weight_kg
+    ParcelList:
+      type: object
+      properties:
+        tracking_number:
+          type: string
+          readOnly: true
+        current_status:
+          $ref: '#/components/schemas/ParcelStatusEnum'
+        origin_office_city:
+          type: string
+          readOnly: true
+        destination_office_city:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - destination_office_city
+      - origin_office_city
+      - tracking_number
+    ParcelStatusEnum:
+      enum:
+      - created
+      - accepted
+      - in_transit
+      - arrived
+      - delivered
+      - returned
+      type: string
+      description: |-
+        * `created` - Created
+        * `accepted` - Accepted
+        * `in_transit` - In transit
+        * `arrived` - Arrived
+        * `delivered` - Delivered
+        * `returned` - Returned
+    ParcelStatusHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        new_status:
+          $ref: '#/components/schemas/ParcelStatusEnum'
+        office:
+          allOf:
+          - $ref: '#/components/schemas/PostOffice'
+          readOnly: true
+        comment:
+          type: string
+          maxLength: 255
+        changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - changed_at
+      - id
+      - new_status
+      - office
+    ParcelStatusUpdate:
+      type: object
+      properties:
+        new_status:
+          $ref: '#/components/schemas/ParcelStatusEnum'
+        office:
+          type: integer
+        comment:
+          type: string
+          maxLength: 255
+      required:
+      - new_status
+      - office
+    PostOffice:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        city:
+          type: string
+          maxLength: 100
+        address:
+          type: string
+          maxLength: 255
+        postal_code:
+          type: string
+          maxLength: 20
+      required:
+      - address
+      - city
+      - id
+      - number
+      - postal_code
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
